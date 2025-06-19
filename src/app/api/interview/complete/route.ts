@@ -1,7 +1,5 @@
 // src/app/api/interview/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
-
-// Ініціалізація Prisma з глобальним кешем для Next.js
 import { PrismaClient } from "@prisma/client";
 
 declare global {
@@ -12,10 +10,8 @@ const prisma = global.prisma || new PrismaClient();
 if (process.env.NODE_ENV !== "production") global.prisma = prisma;
 
 interface ProemCallbackBody {
-  type: "finishedinterview";
-  content: {
-    interviewResultId: number;
-  };
+  interviewResultId: number; // Оновлено для прямого поля
+  bhId?: string; // Додаткове поле від Proem
 }
 
 interface SuccessResponse {
@@ -28,56 +24,42 @@ interface ErrorResponse {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
+  console.log("Received POST request to /api/interview/complete");
   try {
-    const rawBody = await request.text();
-    console.log("Raw request body:", rawBody);
+    // Пряме парсинг тіла як JSON
+    const body = await request.json() as Partial<ProemCallbackBody>;
 
-    let interviewResultId: number | undefined;
+    console.log("Parsed JSON body:", body);
 
-    let body: Partial<ProemCallbackBody> = {};
-    if (rawBody) {
-      try {
-        body = (await request.json()) as ProemCallbackBody;
-        console.log("Parsed JSON body:", body);
-        interviewResultId = body.content?.interviewResultId;
-      } catch (jsonError) {
-        console.error("Failed to parse JSON:", rawBody, jsonError);
-      }
-    }
+    const interviewResultId = body.interviewResultId;
 
-    if (!interviewResultId) {
-      const { searchParams } = new URL(request.url);
-      const type = searchParams.get("type");
-      const resultId = searchParams.get("interviewResultId");
-
-      console.log("Query parameters - type:", type, "interviewResultId:", resultId);
-
-      if (type === "finishedinterview" && resultId) {
-        interviewResultId = parseInt(resultId, 10);
-        if (isNaN(interviewResultId)) {
-          return NextResponse.json({ error: "Invalid interviewResultId format" }, { status: 400 });
-        }
-      }
-    }
-
-    if (!interviewResultId) {
-      return NextResponse.json({ error: "interviewResultId is missing or invalid" }, { status: 400 });
+    if (!interviewResultId || isNaN(Number(interviewResultId))) {
+      return NextResponse.json(
+        { error: "interviewResultId is missing or invalid" },
+        { status: 400 }
+      );
     }
 
     console.log("Interview completed with ID:", interviewResultId);
 
     await prisma.callbackLog.create({
       data: {
-        interviewResultId,
+        interviewResultId: Number(interviewResultId), // Перетворюємо в число
         type: "finishedinterview",
       },
     });
 
-    return NextResponse.json({ success: true, interviewResultId }, { status: 200 });
+    return NextResponse.json(
+      { success: true, interviewResultId: Number(interviewResultId) },
+      { status: 200 }
+    );
   } catch (error: unknown) {
     console.error("Error processing callback:", error instanceof Error ? error.message : error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   } finally {
     await prisma.$disconnect();
   }
-}//test
+}
