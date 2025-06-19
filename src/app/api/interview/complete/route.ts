@@ -1,8 +1,11 @@
 // src/app/api/interview/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
+
+// Ініціалізація Prisma з глобальним кешем для Next.js
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+const prisma = global.prisma || new PrismaClient();
+if (process.env.NODE_ENV !== "production") global.prisma = prisma;
 
 interface ProemCallbackBody {
   type: "finishedinterview";
@@ -22,13 +25,11 @@ interface ErrorResponse {
 
 export async function POST(request: NextRequest): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   try {
-    // Отримуємо сирі дані запиту
     const rawBody = await request.text();
     console.log("Raw request body:", rawBody);
 
     let interviewResultId: number | undefined;
 
-    // Спроба парсити JSON з тіла
     let body: Partial<ProemCallbackBody> = {};
     if (rawBody) {
       try {
@@ -40,7 +41,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
       }
     }
 
-    // Перевірка query parameters, якщо JSON відсутній
     if (!interviewResultId) {
       const { searchParams } = new URL(request.url);
       const type = searchParams.get("type");
@@ -56,15 +56,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
       }
     }
 
-    // Перевірка валідності
     if (!interviewResultId) {
       return NextResponse.json({ error: "interviewResultId is missing or invalid" }, { status: 400 });
     }
 
-    // Логування для дебагу
     console.log("Interview completed with ID:", interviewResultId);
 
-    // Зберігаємо callback у базі даних (опціонально)
     await prisma.callbackLog.create({
       data: {
         interviewResultId,

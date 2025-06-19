@@ -1,0 +1,15 @@
+datasource db {
+  provider = "postgresql" // або "sqlite", "mysql" тощо
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model CallbackLog {
+  id            Int      @id @default(autoincrement())
+  interviewResultId Int
+  type          String
+  receivedAt    DateTime @default(now())
+}
