@@ -10,8 +10,8 @@ const prisma = global.prisma || new PrismaClient();
 if (process.env.NODE_ENV !== "production") global.prisma = prisma;
 
 interface ProemCallbackBody {
-  interviewResultId: number; // Оновлено для прямого поля
-  bhId?: string; // Додаткове поле від Proem
+  interviewResultId: number;
+  bhId?: string;
 }
 
 interface SuccessResponse {
@@ -26,7 +26,6 @@ interface ErrorResponse {
 export async function POST(request: NextRequest): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   console.log("Received POST request to /api/interview/complete");
   try {
-    // Пряме парсинг тіла як JSON
     const body = await request.json() as Partial<ProemCallbackBody>;
 
     console.log("Parsed JSON body:", body);
@@ -42,9 +41,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
 
     console.log("Interview completed with ID:", interviewResultId);
 
+    // Перевірка наявності DATABASE_URL перед операцією з базою
+    if (!process.env.DATABASE_URL) {
+      console.warn("DATABASE_URL is not set, skipping database operation");
+      return NextResponse.json(
+        { success: true, interviewResultId: Number(interviewResultId) },
+        { status: 200 }
+      );
+    }
+
     await prisma.callbackLog.create({
       data: {
-        interviewResultId: Number(interviewResultId), // Перетворюємо в число
+        interviewResultId: Number(interviewResultId),
         type: "finishedinterview",
       },
     });
