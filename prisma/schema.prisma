@@ -1,15 +1,244 @@
-datasource db {
-  provider = "postgresql" // або "sqlite", "mysql" тощо
-  url      = env("DATABASE_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/lib/prisma/generated"
 }
 
-model CallbackLog {
-  id            Int      @id @default(autoincrement())
-  interviewResultId Int
-  type          String
-  receivedAt    DateTime @default(now())
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model ApiKey {
+  id          Int      @id @default(autoincrement())
+  keyHash     String   @unique @map("key_hash")
+  userId      String   @map("user_id")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user        Account  @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "idx_api_key_user_id")
+  @@map("api_key")
+}
+
+model Form {
+  id             Int              @id @default(autoincrement())
+  createdBy      Int              @map("created_by")
+  title          String
+  description    String?
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organizationId String           @map("organization_id")
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignments    FormAssignment[]
+  fields         FormField[]
+  responses      FormResponse[]
+  groups         FormFieldGroup[]
+  categories     Category[]
+
+  @@map("form")
+}
+
+model Category {
+  id        Int                 @id @default(autoincrement())
+  formId    Int                 @map("form_id")
+  name      String
+  createdAt DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  form      Form                @relation(fields: [formId], references: [id], onDelete: Cascade)
+  fields    FormFieldCategory[]
+
+  @@index([formId], map: "idx_category_form_id")
+  @@map("category")
+}
+
+model FormFieldCategory {
+  formFieldId Int       @map("form_field_id")
+  categoryId  Int       @map("category_id")
+  formField   FormField @relation(fields: [formFieldId], references: [id], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([formFieldId, categoryId])
+  @@map("form_field_category")
+}
+
+model FormAssignment {
+  formId       Int       @map("form_id")
+  patientId    String?   @map("patient_id")
+  id           Int       @id @default(autoincrement())
+  patientEmail String?   @map("patient_email")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  dueDate      DateTime? @map("due_date") @db.Timestamptz(6)
+  form         Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+  patient      Patient?  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("form_assignment")
+}
+
+model FormField {
+  id               Int                 @id @default(autoincrement())
+  formId           Int                 @map("form_id")
+  label            String
+  type             String
+  setting          Json?               @default("{}")
+  sortOrder        Int                 @map("sort_order") @db.SmallInt
+  createdAt        DateTime?           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  formFieldGroupId Int?                @map("form_field_group_id")
+  isRequired       Boolean             @default(false) @map("is_required")
+  formFieldGroup   FormFieldGroup?     @relation(fields: [formFieldGroupId], references: [id], onDelete: Cascade)
+  form             Form                @relation(fields: [formId], references: [id], onDelete: Cascade)
+  categories       FormFieldCategory[]
+  responseFields   FormResponseField[]
+
+  @@map("form_field")
+}
+
+model FormFieldGroup {
+  id             Int                         @id @default(autoincrement())
+  createdAt      DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  formId         Int                         @map("form_id")
+  label          String
+  sortOrder      Int                         @map("sort_order") @db.SmallInt
+  formFields     FormField[]
+  groupInstances FormResponseGroupInstance[] @relation("FormFieldGroupToGroupInstance")
+  form           Form                        @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@map("form_field_group")
+}
+
+model FormResponse {
+  id        Int                         @id(map: "response_pkey") @default(autoincrement())
+  formId    Int                         @map("form_id")
+  patientId String?                     @map("patient_id")
+  createdAt DateTime?                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  form      Form                        @relation(fields: [formId], references: [id], onDelete: Cascade)
+  patient   Patient?                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  fields    FormResponseField[]
+  instances FormResponseGroupInstance[]
+
+  @@map("form_response")
+}
+
+model FormResponseField {
+  id                          Int                        @id(map: "response_items_pkey") @default(autoincrement())
+  responseId                  Int?                       @map("response_id")
+  fieldId                     Int?                       @map("field_id")
+  valueString                 String?                    @map("value")
+  valueNumber                 Float?                     @map("value_number")
+  createdAt                   DateTime?                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  formResponseGroupInstanceId Int?                       @map("form_response_group_instance_id")
+  field                       FormField?                 @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  groupInstance               FormResponseGroupInstance? @relation(fields: [formResponseGroupInstanceId], references: [id], onDelete: Cascade)
+  response                    FormResponse?              @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@map("form_response_field")
+}
+
+model FormResponseGroupInstance {
+  id               Int                 @id @default(autoincrement())
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  formResponseId   Int                 @map("form_response_id")
+  formFieldGroupId Int                 @map("form_field_group_id")
+  sortOrder        Int                 @map("sort_order") @db.SmallInt
+  responseFields   FormResponseField[]
+  fieldGroup       FormFieldGroup      @relation("FormFieldGroupToGroupInstance", fields: [formFieldGroupId], references: [id], onDelete: Cascade)
+  response         FormResponse        @relation(fields: [formResponseId], references: [id], onDelete: Cascade)
+
+  @@map("form_response_group_instance")
+}
+
+model Organization {
+  id          String       @id
+  name        String
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  forms       Form[]
+  teamMembers TeamMember[]
+  patients    Patient[]
+
+  @@map("organization")
+}
+
+model TeamMember {
+  id             Int       @id @default(autoincrement())
+  organizationId String    @map("organization_id")
+  accountId      String?   @map("account_id")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  acceptedAt     DateTime? @map("accepted_at") @db.Timestamptz(6)
+  invitedById    String?   @map("invited_by")
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(6)
+
+  role                TeamRole
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  account             Account?             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  providerAssignments ProviderAssignment[] @relation("TeamMemberToProviderAssignment")
+
+  @@unique([organizationId, accountId])
+  @@index([organizationId])
+  @@index([accountId])
+  @@map("team_member")
+}
+
+model Account {
+  id         String    @id
+  userId     String    @unique @map("user_id")
+  fullName   String    @default("No Name") @map("full_name")
+  username   String?   @unique
+  avatarUrl  String?   @map("avatar_url")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  email      String    @unique
+  verifiedAt DateTime? @map("verified_at")
+  apiKeys    ApiKey[]
+
+  teamMembers TeamMember[]
+  patient     Patient[]    @relation("PatientToProviderOrg")
+
+  @@index([id])
+  @@index([userId])
+  @@map("account")
+}
+
+model Patient {
+  patientAccountId    String?              @map("patient_account_id")
+  organizationId      String               @map("organization_id")
+  id                  String               @id
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  acceptedAt          DateTime?            @map("accepted_at") @db.Timestamptz(6)
+  updatedAt           DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patient             Account?             @relation("PatientToProviderOrg", fields: [patientAccountId], references: [id], onDelete: SetNull)
+  providerAssignments ProviderAssignment[]
+  formAssignments     FormAssignment[]
+  formResponses       FormResponse[]
+
+  @@unique([patientAccountId, organizationId])
+  @@index([id])
+  @@map("patient")
+}
+
+model ProviderAssignment {
+  id           Int        @id @default(autoincrement())
+  teamMemberId Int        @map("team_member_id")
+  patientId    String     @map("patient_id")
+  acceptedAt   DateTime?  @map("accepted_at") @db.Timestamptz(6)
+  teamMember   TeamMember @relation("TeamMemberToProviderAssignment", fields: [teamMemberId], references: [id], onDelete: Cascade)
+  patient      Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([teamMemberId, patientId])
+  @@map("provider_assignment")
+}
+
+enum TeamRole {
+  patient
+  provider
+  admin
+
+  @@map("team_role")
 }

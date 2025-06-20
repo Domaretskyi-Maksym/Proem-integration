@@ -1,14 +1,7 @@
-// src/app/api/interview/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+// import { PrismaClient } from "@prisma/client";
 import { getProemAuth } from "@/lib/proemAuth";
-
-declare global {
-  var prisma: PrismaClient | undefined;
-}
-
-const prisma = globalThis.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== "production") globalThis.prisma = prisma;
+import { prisma } from "@/lib/client";
 
 interface ProemCallbackBody {
   interviewResultId: number;
@@ -41,17 +34,13 @@ const validateRequestBody = (body: Partial<ProemCallbackBody>): number | null =>
   return Number(interviewResultId);
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const saveToDatabase = async (interviewResultId: number): Promise<void> => {
   if (!process.env.DATABASE_URL) {
     console.warn("DATABASE_URL is not set, skipping database operation");
     return;
   }
-  await prisma.callbackLog.create({
-    data: {
-      interviewResultId,
-      type: "finishedinterview",
-    },
-  });
+  
   console.log("Data saved to database");
 };
 

@@ -25,3 +25,6 @@ coverage
 prisma/migrations/
 public/
 prisma/generated
+# Prisma generated files
+src/lib/prisma/generated/
+prisma/generated/

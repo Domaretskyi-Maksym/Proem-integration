@@ -1,4 +1,3 @@
-// src/lib/proemAuth.ts
 import fetch from "node-fetch";
 
 interface ProemLoginBody {

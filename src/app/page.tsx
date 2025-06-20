@@ -24,10 +24,10 @@ export default function Home() {
         {isIframeVisible && (
           <iframe
             src={iframeSrc}
-            width="1000"
+            width="1200"
             height="800"
+            className="border-0 mt-4 shadow-lg"
             title="Embedded Content"
-            className="border-0 mt-4"
           />
         )}
       </main>
