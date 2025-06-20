@@ -1,6 +1,7 @@
 // src/app/api/interview/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import fetch from "node-fetch"; // Додаємо для HTTP-запитів
 
 declare global {
   var prisma: PrismaClient | undefined;
@@ -17,6 +18,7 @@ interface ProemCallbackBody {
 interface SuccessResponse {
   success: true;
   interviewResultId: number;
+  pdfUrl?: string; // Додали для можливого URL PDF
 }
 
 interface ErrorResponse {
@@ -42,25 +44,45 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
     console.log("Interview completed with ID:", interviewResultId);
 
     // Перевірка наявності DATABASE_URL перед операцією з базою
-    if (!process.env.DATABASE_URL) {
+    if (process.env.DATABASE_URL) {
+      await prisma.callbackLog.create({
+        data: {
+          interviewResultId: Number(interviewResultId),
+          type: "finishedinterview",
+        },
+      });
+      console.log("Data saved to database");
+    } else {
       console.warn("DATABASE_URL is not set, skipping database operation");
-      return NextResponse.json(
-        { success: true, interviewResultId: Number(interviewResultId) },
-        { status: 200 }
-      );
     }
+// Формування URL для Proem API з коректними параметрами
+    const proemApiUrl = `https://proemhealth.nview.tech/AppApi/3/downloadInterviewResults?accessId=DHeXPAJ1hRg0_NTHkXSZZJAd_bpJq3yA&accessToken=-LGNtwl_tb8IoiLKbcBO4gBelZiv1E1P&interviewResultId=${interviewResultId}`;
 
-    await prisma.callbackLog.create({
-      data: {
-        interviewResultId: Number(interviewResultId),
-        type: "finishedinterview",
+    console.log("Fetching PDF from:", proemApiUrl);
+
+    const response = await fetch(proemApiUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
       },
     });
 
-    return NextResponse.json(
-      { success: true, interviewResultId: Number(interviewResultId) },
-      { status: 200 }
-    );
+    if (!response.ok) {
+      throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+    }
+
+    // Отримуємо буфер PDF
+    const pdfBuffer = await response.buffer();
+    console.log("PDF fetched successfully, size:", pdfBuffer.length, "bytes");
+
+    // Повертаємо PDF як відповідь для скачування
+    return new NextResponse(pdfBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="interview_${interviewResultId}.pdf"`,
+      },
+    });
   } catch (error: unknown) {
     console.error("Error processing callback:", error instanceof Error ? error.message : error);
     return NextResponse.json(
