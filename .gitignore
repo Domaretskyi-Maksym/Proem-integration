@@ -22,3 +22,6 @@ coverage
 *.swp
 *.swo
 *.swn       
+prisma/migrations/
+public/
+prisma/generated
