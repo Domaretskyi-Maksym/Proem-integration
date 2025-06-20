@@ -1,8 +1,7 @@
-
+// src/app/api/interview/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import fetch from "node-fetch";
-
+import { getProemAuth } from "@/lib/proemAuth";
 
 declare global {
   var prisma: PrismaClient | undefined;
@@ -10,7 +9,6 @@ declare global {
 
 const prisma = globalThis.prisma || new PrismaClient();
 if (process.env.NODE_ENV !== "production") globalThis.prisma = prisma;
-
 
 interface ProemCallbackBody {
   interviewResultId: number;
@@ -27,18 +25,13 @@ interface ErrorResponse {
   error: string;
 }
 
-
 const PROEM_API_CONFIG = {
   baseUrl: "https://proemhealth.nview.tech/AppApi/3/downloadInterviewResults",
-  accessId: "DHeXPAJ1hRg0_NTHkXSZZJAd_bpJq3yA",
-  accessToken: "-LGNtwl_tb8IoiLKbcBO4gBelZiv1E1P",
 };
 
-
-const buildProemApiUrl = (interviewResultId: number): string => {
-  return `${PROEM_API_CONFIG.baseUrl}?accessId=${PROEM_API_CONFIG.accessId}&accessToken=${PROEM_API_CONFIG.accessToken}&interviewResultId=${interviewResultId}`;
+const buildProemApiUrl = (interviewResultId: number, accessId: string, accessToken: string): string => {
+  return `${PROEM_API_CONFIG.baseUrl}?accessId=${accessId}&accessToken=${accessToken}&interviewResultId=${interviewResultId}`;
 };
-
 
 const validateRequestBody = (body: Partial<ProemCallbackBody>): number | null => {
   const interviewResultId = body.interviewResultId;
@@ -47,7 +40,6 @@ const validateRequestBody = (body: Partial<ProemCallbackBody>): number | null =>
   }
   return Number(interviewResultId);
 };
-
 
 const saveToDatabase = async (interviewResultId: number): Promise<void> => {
   if (!process.env.DATABASE_URL) {
@@ -63,13 +55,9 @@ const saveToDatabase = async (interviewResultId: number): Promise<void> => {
   console.log("Data saved to database");
 };
 
-
 const fetchPdfFromProem = async (url: string): Promise<Buffer> => {
   const response = await fetch(url, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
   });
 
   if (!response.ok) {
@@ -79,7 +67,6 @@ const fetchPdfFromProem = async (url: string): Promise<Buffer> => {
   const pdfArrayBuffer = await response.arrayBuffer();
   return Buffer.from(pdfArrayBuffer);
 };
-
 
 export async function POST(request: NextRequest): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   try {
@@ -98,7 +85,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
 
     await saveToDatabase(interviewResultId);
 
-    const proemApiUrl = buildProemApiUrl(interviewResultId);
+    const { accessId, accessToken } = await getProemAuth();
+    const proemApiUrl = buildProemApiUrl(interviewResultId, accessId, accessToken);
     console.log("Fetching PDF from:", proemApiUrl);
 
     const pdfBuffer = await fetchPdfFromProem(proemApiUrl);
@@ -119,6 +107,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
       { status: 500 }
     );
   } finally {
-    await prisma.$disconnect().catch((err: ErrorResponse) => console.error("Failed to disconnect Prisma:", err));
+    await prisma.$disconnect().catch((err: Error) => console.error("Failed to disconnect Prisma:", err));
   }
 }

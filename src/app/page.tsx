@@ -18,7 +18,7 @@ export default function Home() {
             onClick={handleClick}
             className="bg-blue-500 w-[200px] top-[1px] mb-[20px] relative hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
           >
-            Deploy Now
+            Start Interview
           </button>
         )}
         {isIframeVisible && (
