@@ -1,3 +1,4 @@
+// src/lib/proemAuth.ts
 import fetch from "node-fetch";
 
 interface ProemLoginBody {
@@ -26,6 +27,12 @@ export const getProemAuth = async (): Promise<ProemAuthResponse> => {
     clinicAccount: process.env.PROEM_CLINIC_ACCOUNT || "",
   };
 
+  console.log("Login attempt with raw env values:", {
+    apiKey: process.env.PROEM_API_KEY,
+    email: process.env.PROEM_EMAIL,
+    password: process.env.PROEM_PASSWORD,
+    clinicAccount: process.env.PROEM_CLINIC_ACCOUNT,
+  });
   console.log("Login attempt with body:", loginBody);
 
   const response = await fetch(loginUrl, {
@@ -38,6 +45,7 @@ export const getProemAuth = async (): Promise<ProemAuthResponse> => {
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error("Login failed response:", errorText);
     throw new Error(`Proem login failed: ${response.statusText} - ${errorText}`);
   }
 
