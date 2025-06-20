@@ -20,11 +20,13 @@ export const getProemAuth = async (): Promise<ProemAuthResponse> => {
 
   const loginUrl = "https://proemhealth.nview.tech/AppApi/3/login";
   const loginBody: ProemLoginBody = {
-    apiKey: process.env.PROEM_API_KEY!,
-    email: process.env.PROEM_EMAIL!,
-    password: process.env.PROEM_PASSWORD!,
-    clinicAccount: process.env.PROEM_CLINIC_ACCOUNT!,
+    apiKey: process.env.PROEM_API_KEY || "",
+    email: process.env.PROEM_EMAIL || "",
+    password: process.env.PROEM_PASSWORD || "",
+    clinicAccount: process.env.PROEM_CLINIC_ACCOUNT || "",
   };
+
+  console.log("Login attempt with body:", loginBody);
 
   const response = await fetch(loginUrl, {
     method: "POST",
@@ -35,7 +37,8 @@ export const getProemAuth = async (): Promise<ProemAuthResponse> => {
   });
 
   if (!response.ok) {
-    throw new Error(`Proem login failed: ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Proem login failed: ${response.statusText} - ${errorText}`);
   }
 
   proemAuth = await response.json() as ProemAuthResponse;
