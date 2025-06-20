@@ -1,7 +1,7 @@
 // src/app/api/interview/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import fetch from "node-fetch"; // Додаємо для HTTP-запитів
+import fetch from "node-fetch";
 
 declare global {
   var prisma: PrismaClient | undefined;
@@ -18,7 +18,7 @@ interface ProemCallbackBody {
 interface SuccessResponse {
   success: true;
   interviewResultId: number;
-  pdfUrl?: string; // Додали для можливого URL PDF
+  pdfUrl?: string;
 }
 
 interface ErrorResponse {
@@ -43,7 +43,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
 
     console.log("Interview completed with ID:", interviewResultId);
 
-    // Перевірка наявності DATABASE_URL перед операцією з базою
     if (process.env.DATABASE_URL) {
       await prisma.callbackLog.create({
         data: {
@@ -55,7 +54,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
     } else {
       console.warn("DATABASE_URL is not set, skipping database operation");
     }
-// Формування URL для Proem API з коректними параметрами
+
     const proemApiUrl = `https://proemhealth.nview.tech/AppApi/3/downloadInterviewResults?accessId=DHeXPAJ1hRg0_NTHkXSZZJAd_bpJq3yA&accessToken=-LGNtwl_tb8IoiLKbcBO4gBelZiv1E1P&interviewResultId=${interviewResultId}`;
 
     console.log("Fetching PDF from:", proemApiUrl);
@@ -71,11 +70,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
       throw new Error(`Failed to fetch PDF: ${response.statusText}`);
     }
 
-    // Отримуємо буфер PDF
-    const pdfBuffer = await response.buffer();
+    // Використовуємо arrayBuffer замість buffer
+    const pdfArrayBuffer = await response.arrayBuffer();
+    const pdfBuffer = Buffer.from(pdfArrayBuffer); // Конвертуємо в Buffer для NextResponse
     console.log("PDF fetched successfully, size:", pdfBuffer.length, "bytes");
 
-    // Повертаємо PDF як відповідь для скачування
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
