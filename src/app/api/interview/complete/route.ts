@@ -20,8 +20,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
 
     const { accessId, accessToken } = await getProemAuth();
     const proemApiUrl = buildProemApiUrl(interviewResultId, accessId, accessToken);
+	console.log("Fetching PDF from:", proemApiUrl);
 
     const pdfBuffer = await fetchPdfFromProem(proemApiUrl);
+	console.log("PDF fetched successfully, size:", pdfBuffer.length, "bytes");
 
     return new NextResponse(pdfBuffer, {
       status: 200,
