@@ -26,12 +26,6 @@ export const getProemAuth = async (): Promise<ProemAuthResponse> => {
     clinicAccount: process.env.PROEM_CLINIC_ACCOUNT || "",
   };
 
-  console.log("Login attempt with raw env values:", {
-    apiKey: process.env.PROEM_API_KEY,
-    email: process.env.PROEM_EMAIL,
-    password: process.env.PROEM_PASSWORD,
-    clinicAccount: process.env.PROEM_CLINIC_ACCOUNT,
-  });
   console.log("Login attempt with body:", loginBody);
 
   const response = await fetch(loginUrl, {
