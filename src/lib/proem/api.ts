@@ -8,7 +8,6 @@ export const fetchPdfFromProem = async (url: string): Promise<Buffer> => {
 };
 
 export const fetchInterviewResults = async (url: string): Promise<unknown> => {
-    console.log(url)
   try {
     const response = await fetch(url, {
       method: "GET",
