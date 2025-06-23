@@ -1,6 +1,6 @@
 export interface ProemCallbackBody {
   interviewResultId: number;
-  bhId: number;
+  bhtId: number;
 }
 
 export interface SuccessResponse {

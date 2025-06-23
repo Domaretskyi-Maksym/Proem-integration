@@ -2,8 +2,8 @@ import { ProemCallbackBody } from "@/types/proem";
 
 export const validateProemCallback = (
   body: Partial<ProemCallbackBody>
-): { interviewResultId: number; bhId: string } | null => {
-  const { interviewResultId, bhId } = body;
+): { interviewResultId: number; bhtId: string } | null => {
+  const { interviewResultId, bhtId } = body;
 
   if (!interviewResultId || isNaN(Number(interviewResultId))) {
     return null;
@@ -11,6 +11,6 @@ export const validateProemCallback = (
 
   return {
     interviewResultId: Number(interviewResultId),
-    bhId: String(bhId)
+    bhtId: String(bhtId)
   };
 };

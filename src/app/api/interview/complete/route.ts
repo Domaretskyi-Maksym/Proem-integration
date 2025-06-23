@@ -11,7 +11,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
   try {
     const body = await request.json() as Partial<ProemCallbackBody>;
 	console.log(body)
-    const { interviewResultId, bhId } = validateProemCallback(body) ?? {};
+    const { interviewResultId, bhtId } = validateProemCallback(body) ?? {};
 
     if (!interviewResultId) {
       return NextResponse.json({ error: "interviewResultId is missing or invalid" }, { status: 400 });
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
     const proemPDFApiUrl = buildUrlToFetchPDF(interviewResultId, accessId, accessToken);
 	console.log("Fetching PDF from:", proemPDFApiUrl);
 
-	const proemResultsApiUrl = buildURLToFetchInterviewResults(accessId, accessToken, bhId);
+	const proemResultsApiUrl = buildURLToFetchInterviewResults(accessId, accessToken, bhtId);
 	console.log("Fetching interview results from:", proemResultsApiUrl);
 
     const pdfBuffer = await fetchPdfFromProem(proemPDFApiUrl);
