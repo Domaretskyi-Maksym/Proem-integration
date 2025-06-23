@@ -34,9 +34,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
 
 	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-expect-error
-    interviewResults.interviewResults.forEach((result, index) => {
-      console.log(`Answers for interview ${index + 1} (ID: ${result.id}):`, result.answers);
-    });
+    // Log the last interview with its answers
+		const lastInterview = interviewResults.interviewResults[interviewResults.interviewResults.length - 1];
+	if (lastInterview) {
+  		console.log("Last Interview (ID:", lastInterview.id, "):", lastInterview);
+    	console.log("Answers for Last Interview:");
+    	console.dir(lastInterview.answers, { depth: null });
+	} else {
+  		console.log("No interviews found.");
+	}
 
     return new NextResponse(pdfBuffer, {
       status: 200,
