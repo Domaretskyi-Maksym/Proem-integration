@@ -14,7 +14,7 @@ export const buildUrlToFetchPDF = (
 export const buildURLToFetchInterviewResults = (
   accessId: string,
   accessToken: string,
-  patientExternalId?: number
+  patientExternalId?: string
 ): string => {
   const now = new Date();
   const startDate = now.toISOString().split('T')[0];
