@@ -1,11 +1,24 @@
 export const PROEM_API_CONFIG = {
-  baseUrl: "https://proemhealth.nview.tech/AppApi/3/downloadInterviewResults",
+  getPDFresults: "https://proemhealth.nview.tech/AppApi/3/downloadInterviewResults",
+  getInterviewResults: "https://proemhealth.nview.tech/AppApi/3/getInterviewResultsAnswers",
 };
 
-export const buildProemApiUrl = (
+export const buildUrlToFetchPDF = (
   interviewResultId: number,
   accessId: string,
   accessToken: string
 ): string => {
-  return `${PROEM_API_CONFIG.baseUrl}?accessId=${accessId}&accessToken=${accessToken}&interviewResultId=${interviewResultId}`;
+  return `${PROEM_API_CONFIG.getPDFresults}?accessId=${accessId}&accessToken=${accessToken}&interviewResultId=${interviewResultId}`;
+};
+
+export const buildURLToFetchInterviewResults = (
+  accessId: string,
+  accessToken: string,
+  patientExternalId?: number
+): string => {
+  const now = new Date();
+  const startDate = now.toISOString().split('T')[0];
+  const endDate = now.toISOString().split('T')[0];
+
+  return `${PROEM_API_CONFIG.getInterviewResults}?accessId=${accessId}&accessToken=${accessToken}&patientExternalId=${patientExternalId}&startDate=${startDate}&endDate=${endDate}`;
 };

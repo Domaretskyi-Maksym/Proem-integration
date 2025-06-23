@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProemAuth } from "@/lib/proemAuth";
-import { buildProemApiUrl } from "@/lib/proem/utils";
-import { fetchPdfFromProem } from "@/lib/proem/api";
+import { buildURLToFetchInterviewResults, buildUrlToFetchPDF } from "@/lib/proem/utils";
+import { fetchPdfFromProem, fetchInterviewResults } from "@/lib/proem/api";
 import { validateProemCallback } from "@/lib/validation/proem";
 import { saveToDatabase } from "@/lib/db/utils";
 import { prisma } from "@/lib/client";
@@ -10,7 +10,7 @@ import { SuccessResponse, ErrorResponse, ProemCallbackBody } from "@/types/proem
 export async function POST(request: NextRequest): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   try {
     const body = await request.json() as Partial<ProemCallbackBody>;
-    const interviewResultId = validateProemCallback(body);
+    const { interviewResultId, bhId } = validateProemCallback(body) ?? {};
 
     if (!interviewResultId) {
       return NextResponse.json({ error: "interviewResultId is missing or invalid" }, { status: 400 });
@@ -19,11 +19,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
     await saveToDatabase(interviewResultId);
 
     const { accessId, accessToken } = await getProemAuth();
-    const proemApiUrl = buildProemApiUrl(interviewResultId, accessId, accessToken);
-	console.log("Fetching PDF from:", proemApiUrl);
+    const proemPDFApiUrl = buildUrlToFetchPDF(interviewResultId, accessId, accessToken);
+	console.log("Fetching PDF from:", proemPDFApiUrl);
 
-    const pdfBuffer = await fetchPdfFromProem(proemApiUrl);
+	const proemResultsApiUrl = buildURLToFetchInterviewResults(accessId, accessToken, bhId);
+	console.log("Fetching interview results from:", proemResultsApiUrl);
+
+    const pdfBuffer = await fetchPdfFromProem(proemPDFApiUrl);
 	console.log("PDF fetched successfully, size:", pdfBuffer.length, "bytes");
+
+	const interviewResults = await fetchInterviewResults(proemResultsApiUrl);
+    console.log("Interview results fetched:", interviewResults);
 
     return new NextResponse(pdfBuffer, {
       status: 200,
