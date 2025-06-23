@@ -32,17 +32,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
 	const interviewResults = await fetchInterviewResults(proemResultsApiUrl);
     console.log("Interview results fetched:", interviewResults);
 
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-expect-error
-    // Log the last interview with its answers
-		const lastInterview = interviewResults.interviewResults[interviewResults.interviewResults.length - 1];
-	if (lastInterview) {
-  		console.log("Last Interview (ID:", lastInterview.id, "):", lastInterview);
-    	console.log("Answers for Last Interview:");
-    	console.dir(lastInterview.answers, { depth: null });
-	} else {
-  		console.log("No interviews found.");
-	}
+
+	// @ts-expect-error: Unreachable code error
+    const lastInterview = interviewResults.interviewResults?.[interviewResults.interviewResults.length - 1];
+    if (lastInterview) {
+      console.log("Last Interview (ID:", lastInterview.id, "):", lastInterview);
+      console.log("Answers for Last Interview:"); // Separate label
+      console.dir(lastInterview.answers, { depth: null }); // Correct usage with options
+    } else {
+      console.log("No interviews found or interviewResults structure invalid.");
+    }
 
     return new NextResponse(pdfBuffer, {
       status: 200,
