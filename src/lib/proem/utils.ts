@@ -17,7 +17,8 @@ export const buildURLToFetchInterviewResults = (
   patientExternalId?: string
 ): string => {
   const now = new Date();
-  const startDate = now.toISOString().split('T')[0];
+  now.setMinutes(now.getMinutes() - 10);
+  const startDate = now.toISOString();
   const endDate = now.toISOString().split('T')[0];
 
   return `${PROEM_API_CONFIG.getInterviewResults}?accessId=${accessId}&accessToken=${accessToken}&patientExternalId=${patientExternalId}&startDate=${startDate}&endDate=${endDate}`;

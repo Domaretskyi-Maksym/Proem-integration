@@ -32,6 +32,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
 	const interviewResults = await fetchInterviewResults(proemResultsApiUrl);
     console.log("Interview results fetched:", interviewResults);
 
+	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+	// @ts-expect-error
+    interviewResults.interviewResults.forEach((result, index) => {
+      console.log(`Answers for interview ${index + 1} (ID: ${result.id}):`, result.answers);
+    });
+
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
