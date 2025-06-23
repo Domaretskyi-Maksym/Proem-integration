@@ -10,6 +10,7 @@ import { SuccessResponse, ErrorResponse, ProemCallbackBody } from "@/types/proem
 export async function POST(request: NextRequest): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   try {
     const body = await request.json() as Partial<ProemCallbackBody>;
+	console.log(body)
     const { interviewResultId, bhId } = validateProemCallback(body) ?? {};
 
     if (!interviewResultId) {
