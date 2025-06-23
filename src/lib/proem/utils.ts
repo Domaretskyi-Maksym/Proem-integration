@@ -1,6 +1,6 @@
 export const PROEM_API_CONFIG = {
   getPDFresults: "https://proemhealth.nview.tech/AppApi/3/downloadInterviewResults",
-  getInterviewResults: "https://proemhealth.nview.tech/AppApi/3/getInterviewResultsAnswers",
+  getInterviewResults: "https://proemhealth.nview.tech/AppApi/3/getInterviewResultAnswers",
 };
 
 export const buildUrlToFetchPDF = (
