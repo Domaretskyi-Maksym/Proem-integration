@@ -101,34 +101,48 @@ export async function POST(
       // Create FormResponse
       const formResponse = await tx.formResponse.create({
         data: {
-          formId: 1, // Shpould be replaced with correct ID
+          formId: form.id, // Use form.id instead of hardcoded 1
           patientId: patient.id,
           createdAt: new Date(lastInterview.startedAt),
           updatedAt: new Date(lastInterview.completedAt),
         },
       });
 
-      // Create FormResponseField for each answer
+      // Create FormResponseField for each answer with dynamic FormField creation
       if (lastInterview.answers && Array.isArray(lastInterview.answers)) {
         for (const answer of lastInterview.answers) {
-          // Assume question is a fieldId or map it to an existing FormField
-          const field = await tx.formField.findFirst({
+          let field = await tx.formField.findFirst({
             where: { label: `Question_${answer.question}` },
           });
-          if (field) {
-            await tx.formResponseField.create({
+          if (!field) {
+            // Create FormField if it doesn't exist
+            field = await tx.formField.create({
               data: {
-                responseId: formResponse.id,
-                fieldId: field.id,
-                valueString: typeof answer.answerValue === "string" ? answer.answerValue : null,
-                valueNumber: typeof answer.answerValue === "number" ? answer.answerValue : null,
+                formId: form.id,
+                label: `Question_${answer.question}`,
+                type: typeof answer.answerValue === "string" ? "text" : "number",
+                sortOrder: 0,
+                isRequired: false,
                 createdAt: new Date(lastInterview.startedAt),
                 updatedAt: new Date(lastInterview.completedAt),
               },
             });
+            console.log(`Created FormField for question ${answer.question}`);
           } else {
-            console.warn(`FormField not found for question ${answer.question}`);
+            console.log(`Found existing FormField for question ${answer.question}`);
           }
+
+          // Create FormResponseField
+          await tx.formResponseField.create({
+            data: {
+              responseId: formResponse.id,
+              fieldId: field.id,
+              valueString: typeof answer.answerValue === "string" ? answer.answerValue : null,
+              valueNumber: typeof answer.answerValue === "number" ? answer.answerValue : null,
+              createdAt: new Date(lastInterview.startedAt),
+              updatedAt: new Date(lastInterview.completedAt),
+            },
+          });
         }
       }
     });
