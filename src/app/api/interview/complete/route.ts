@@ -17,7 +17,6 @@ import {
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
-  let transactionResult = null;
   try {
     const body = (await request.json()) as Partial<ProemCallbackBody>;
     console.log("Received request body:", body);
@@ -59,109 +58,100 @@ export async function POST(
       });
     }
 
-    // Start Prisma transaction for the last interview
-    transactionResult = await prisma.$transaction(async (tx) => {
-      try {
-        // Define a default organizationId
-        const organizationId = "165746c5-4a59-4106-b39c-afc65d3abde6";
+   const transactionResult = await prisma.$transaction(async (tx) => {
+  const organizationId = "165746c5-4a59-4106-b39c-afc65d3abde6";
 
-        // Upsert Patient
-        const patient = await tx.patient.upsert({
-          where: { id: lastInterview.patient },
-          create: {
-            id: lastInterview.patient,
-            organizationId,
-            createdAt: new Date(lastInterview.startedAt),
-            updatedAt: new Date(),
-          },
-          update: { updatedAt: new Date() },
-        });
+  // 1. Upsert Patient
+  const patient = await tx.patient.upsert({
+    where: { id: lastInterview.patient },
+    create: {
+      id: lastInterview.patient,
+      organizationId,
+      createdAt: new Date(lastInterview.startedAt),
+      updatedAt: new Date(),
+    },
+    update: { updatedAt: new Date() },
+  });
 
-        // Upsert Form based on interviewType
-        const form = await tx.form.upsert({
-          where: { id: 1 }, // Replace with correct ID or use a unique identifier
-          create: {
-            title: `Interview_${lastInterview.interviewType}`,
-            createdBy: 2222, // Replace with actual ID
-            organizationId,
-            createdAt: new Date(lastInterview.startedAt),
-            updatedAt: new Date(lastInterview.completedAt),
-          },
-          update: { updatedAt: new Date(lastInterview.completedAt) },
-        });
+  // 2. Upsert Form
+  const form = await tx.form.upsert({
+    where: { id: 1 }, // ⚠️ Тут бажано мати унікальний ідентифікатор або slug для форми
+    create: {
+      title: `Interview_${lastInterview.interviewType}`,
+      createdBy: 2222, // 🔧 Постав актуальний createdBy
+      organizationId,
+      createdAt: new Date(lastInterview.startedAt),
+      updatedAt: new Date(lastInterview.completedAt),
+    },
+    update: { updatedAt: new Date(lastInterview.completedAt) },
+  });
 
-        console.log("Form:", form);
+  // 3. Create FormResponse
+  const formResponse = await tx.formResponse.create({
+    data: {
+      formId: form.id,
+      patientId: patient.id,
+      createdAt: new Date(lastInterview.startedAt),
+      updatedAt: new Date(lastInterview.completedAt),
+    },
+  });
 
-        // Create FormResponse
-        const formResponse = await tx.formResponse.create({
+  // 4. Handle answers -> fields + responseFields
+  const createdFields = new Map<string, Awaited<ReturnType<typeof tx.formField.create>>>();
+  const createdResponses = new Set<string>();
+
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
+  const responseFieldPromises = lastInterview.answers.map(async (answer) => {
+    const label = `Question_${answer.question}`;
+    let field = createdFields.get(label);
+
+    if (!field) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      field = await tx.formField.findFirst({ where: { label } });
+
+      if (!field) {
+        field = await tx.formField.create({
           data: {
-            formId: form.id, // Use form.id instead of hardcoded 1
-            patientId: patient.id,
+            formId: form.id,
+            label,
+            type: typeof answer.answerValue === "string" ? "text" : "number",
+            sortOrder: 0,
+            isRequired: false,
             createdAt: new Date(lastInterview.startedAt),
             updatedAt: new Date(lastInterview.completedAt),
           },
         });
-
-        // Create FormResponseField for each answer with dynamic FormField creation
-        if (lastInterview.answers && Array.isArray(lastInterview.answers)) {
-          const createdFields = new Map();
-          const createdResponses = new Map();
-          for (const answer of lastInterview.answers) {
-            let field = await tx.formField.findFirst({
-              where: { label: `Question_${answer.question}` },
-            });
-            if (!field) {
-              const label = `Question_${answer.question}`;
-              if (!createdFields.has(label)) {
-                field = await tx.formField.create({
-                  data: {
-                    formId: form.id,
-                    label: label,
-                    type: typeof answer.answerValue === "string" ? "text" : "number",
-                    sortOrder: 0,
-                    isRequired: false,
-                    createdAt: new Date(lastInterview.startedAt),
-                    updatedAt: new Date(lastInterview.completedAt),
-                  },
-                });
-                createdFields.set(label, field);
-                console.log(`Created FormField for question ${answer.question} with id ${field.id}`);
-              } else {
-                field = createdFields.get(label);
-                console.log(`Reusing created FormField for question ${answer.question} with id ${field!.id}`);
-              }
-            } else {
-              console.log(`Found existing FormField for question ${answer.question} with id ${field.id}`);
-            }
-
-            // Unique key for response field: combination of responseId and fieldId
-            const responseKey = `${formResponse.id}-${field!.id}`;
-            if (!createdResponses.has(responseKey)) {
-              await tx.formResponseField.create({
-                data: {
-                  responseId: formResponse.id,
-                  fieldId: field!.id,
-                  valueString: typeof answer.answerValue === "string" ? answer.answerValue : null,
-                  valueNumber: typeof answer.answerValue === "number" ? answer.answerValue : null,
-                  createdAt: new Date(lastInterview.startedAt),
-                  updatedAt: new Date(lastInterview.completedAt),
-                },
-              });
-              createdResponses.set(responseKey, true);
-              console.log(`Created FormResponseField for responseId ${formResponse.id} and fieldId ${field?.id}`);
-            } else {
-              console.log(`Skipping duplicate FormResponseField for responseId ${formResponse.id} and fieldId ${field?.id}`);
-            }
-          }
-        }
-
-        return { success: true }; // Explicitly return to ensure transaction completes
-      } catch (transactionError) {
-        // @ts-expect-error: Unreachable code error
-        console.error("Transaction error:", transactionError.message);
-        throw transactionError; // Re-throw to handle in outer try-catch
+        console.log(`Created FormField: ${field.id}`);
+      } else {
+        console.log(`Found existing FormField: ${field.id}`);
       }
-    });
+
+      createdFields.set(label, field);
+    }
+
+    const responseKey = `${formResponse.id}-${field.id}`;
+    if (!createdResponses.has(responseKey)) {
+      await tx.formResponseField.create({
+        data: {
+          responseId: formResponse.id,
+          fieldId: field.id,
+          valueString: typeof answer.answerValue === "string" ? answer.answerValue : null,
+          valueNumber: typeof answer.answerValue === "number" ? answer.answerValue : null,
+          createdAt: new Date(lastInterview.startedAt),
+          updatedAt: new Date(lastInterview.completedAt),
+        },
+      });
+      createdResponses.add(responseKey);
+      console.log(`Created FormResponseField: response ${formResponse.id}, field ${field.id}`);
+    }
+  });
+
+  await Promise.all(responseFieldPromises);
+
+  return { success: true };
+});
 
     console.log("Transaction result:", transactionResult);
     console.log("Last Interview (ID:", lastInterview.id, "):", lastInterview);
