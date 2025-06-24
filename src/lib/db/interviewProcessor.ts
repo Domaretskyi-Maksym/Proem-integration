@@ -1,5 +1,3 @@
-import { Prisma } from "@prisma/client";
-
 export interface InterviewResult {
   patient: string | number;
   interviewType: string;
