@@ -103,6 +103,7 @@ export async function POST(
       // Create FormResponseField for each answer with dynamic FormField creation
       if (lastInterview.answers && Array.isArray(lastInterview.answers)) {
         const createdFields = new Map(); // Track created fields to avoid duplicates in one transaction
+        const createdResponses = new Map(); // Track created responses to avoid duplicates
         for (const answer of lastInterview.answers) {
           let field = await tx.formField.findFirst({
             where: { label: `Question_${answer.question}` },
@@ -132,17 +133,23 @@ export async function POST(
             console.log(`Found existing FormField for question ${answer.question} with id ${field.id}`);
           }
 
-          // Create FormResponseField
-          await tx.formResponseField.create({
-            data: {
-              responseId: formResponse.id,
-              fieldId: field!.id,
-              valueString: typeof answer.answerValue === "string" ? answer.answerValue : null,
-              valueNumber: typeof answer.answerValue === "number" ? answer.answerValue : null,
-              createdAt: new Date(lastInterview.startedAt),
-              updatedAt: new Date(lastInterview.completedAt),
-            },
-          });
+          // Unique key for response field: combination of responseId and fieldId
+          const responseKey = `${formResponse.id}-${field?.id}`;
+          if (!createdResponses.has(responseKey)) {
+            await tx.formResponseField.create({
+              data: {
+                responseId: formResponse.id,
+                fieldId: field?.id,
+                valueString: typeof answer.answerValue === "string" ? answer.answerValue : null,
+                valueNumber: typeof answer.answerValue === "number" ? answer.answerValue : null,
+                createdAt: new Date(lastInterview.startedAt),
+                updatedAt: new Date(lastInterview.completedAt),
+              },
+            });
+            createdResponses.set(responseKey, true);
+          } else {
+            console.log(`Skipping duplicate FormResponseField for responseId ${formResponse.id} and fieldId ${field?.id}`);
+          }
         }
       }
     });
