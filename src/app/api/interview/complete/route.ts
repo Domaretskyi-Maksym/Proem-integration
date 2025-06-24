@@ -6,7 +6,7 @@ import {
 } from "@/lib/proem/utils";
 import { fetchPdfFromProem, fetchInterviewResults } from "@/lib/proem/api";
 import { validateProemCallback } from "@/lib/validation/proem";
-import { saveToDatabase } from "@/lib/db/utils";
+import { saveToDatabase, getOrganizationIdByPatientId } from "@/lib/db/utils";
 import { prisma } from "@/lib/client";
 import {
   SuccessResponse,
@@ -58,8 +58,10 @@ export async function POST(
       });
     }
 
-   const transactionResult = await prisma.$transaction(async (tx) => {
+  const transactionResult = await prisma.$transaction(async (tx) => {
   const organizationId = "165746c5-4a59-4106-b39c-afc65d3abde6";
+  const organisationIdFromDB = await getOrganizationIdByPatientId(lastInterview.patient);
+  console.log("Fetched organizationId from DB:", organisationIdFromDB);
 
   // 1. Upsert Patient
   const patient = await tx.patient.upsert({
@@ -75,10 +77,10 @@ export async function POST(
 
   // 2. Upsert Form
   const form = await tx.form.upsert({
-    where: { id: 1 }, // ⚠️ Тут бажано мати унікальний ідентифікатор або slug для форми
+    where: { id: 1 },
     create: {
       title: `Interview_${lastInterview.interviewType}`,
-      createdBy: 2222, // 🔧 Постав актуальний createdBy
+      createdBy: 2222,
       organizationId,
       createdAt: new Date(lastInterview.startedAt),
       updatedAt: new Date(lastInterview.completedAt),
@@ -152,8 +154,8 @@ export async function POST(
 
   return { success: true };
 }, {
-   maxWait: 10000, // скільки максимально чекати на доступ до конекшена
-  timeout: 30000, // максимальний час виконання транзакції (в мілісекундах)
+    maxWait: 10000,
+    timeout: 30000,
 });
 
     console.log("Transaction result:", transactionResult);
