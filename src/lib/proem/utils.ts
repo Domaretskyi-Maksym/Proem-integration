@@ -1,6 +1,8 @@
 export const PROEM_API_CONFIG = {
-  getPDFresults: "https://proemhealth.nview.tech/AppApi/3/downloadInterviewResults",
-  getInterviewResults: "https://proemhealth.nview.tech/AppApi/3/getInterviewResultAnswers",
+  getPDFresults:
+    "https://proemhealth.nview.tech/AppApi/3/downloadInterviewResults",
+  getInterviewResults:
+    "https://proemhealth.nview.tech/AppApi/3/getInterviewResultAnswers",
 };
 
 export const buildUrlToFetchPDF = (
@@ -22,8 +24,8 @@ export const buildURLToFetchInterviewResults = (
   const endDateTime = new Date(now);
   endDateTime.setMinutes(now.getMinutes() + 10);
 
-const startDate = startDateTime.toISOString(); // "2025-06-23T13:05:00.000Z"
-const endDate = endDateTime.toISOString();     // "2025-06-23T13:25:00.000Z"
+  const startDate = startDateTime.toISOString(); // "2025-06-23T13:05:00.000Z"
+  const endDate = endDateTime.toISOString(); // "2025-06-23T13:25:00.000Z"
 
   return `${PROEM_API_CONFIG.getInterviewResults}?accessId=${accessId}&accessToken=${accessToken}&patientExternalId=${patientExternalId}&startDate=${startDate}&endDate=${endDate}`;
 };

@@ -11,6 +11,6 @@ export const validateProemCallback = (
 
   return {
     interviewResultId: Number(interviewResultId),
-    bhtId: String(bhtId)
+    bhtId: String(bhtId),
   };
 };

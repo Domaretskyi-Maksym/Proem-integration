@@ -1,35 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProemAuth } from "@/lib/proemAuth";
-import { buildURLToFetchInterviewResults, buildUrlToFetchPDF } from "@/lib/proem/utils";
+import {
+  buildURLToFetchInterviewResults,
+  buildUrlToFetchPDF,
+} from "@/lib/proem/utils";
 import { fetchPdfFromProem, fetchInterviewResults } from "@/lib/proem/api";
 import { validateProemCallback } from "@/lib/validation/proem";
 import { saveToDatabase } from "@/lib/db/utils";
 import { prisma } from "@/lib/client";
-import { SuccessResponse, ErrorResponse, ProemCallbackBody } from "@/types/proem";
+import {
+  SuccessResponse,
+  ErrorResponse,
+  ProemCallbackBody,
+} from "@/types/proem";
 
-export async function POST(request: NextRequest): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
+export async function POST(
+  request: NextRequest
+): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   try {
-    const body = await request.json() as Partial<ProemCallbackBody>;
-	console.log(body)
+    const body = (await request.json()) as Partial<ProemCallbackBody>;
+    console.log(body);
     const { interviewResultId, bhtId } = validateProemCallback(body) ?? {};
 
     if (!interviewResultId) {
-      return NextResponse.json({ error: "interviewResultId is missing or invalid" }, { status: 400 });
+      return NextResponse.json(
+        { error: "interviewResultId is missing or invalid" },
+        { status: 400 }
+      );
     }
 
     await saveToDatabase(interviewResultId);
 
     const { accessId, accessToken } = await getProemAuth();
-    const proemPDFApiUrl = buildUrlToFetchPDF(interviewResultId, accessId, accessToken);
-	console.log("Fetching PDF from:", proemPDFApiUrl);
+    const proemPDFApiUrl = buildUrlToFetchPDF(
+      interviewResultId,
+      accessId,
+      accessToken
+    );
+    console.log("Fetching PDF from:", proemPDFApiUrl);
 
-	const proemResultsApiUrl = buildURLToFetchInterviewResults(accessId, accessToken, bhtId);
-	console.log("Fetching interview results from:", proemResultsApiUrl);
+    const proemResultsApiUrl = buildURLToFetchInterviewResults(
+      accessId,
+      accessToken,
+      bhtId
+    );
+    console.log("Fetching interview results from:", proemResultsApiUrl);
 
     const pdfBuffer = await fetchPdfFromProem(proemPDFApiUrl);
-	console.log("PDF fetched successfully, size:", pdfBuffer.length, "bytes");
+    console.log("PDF fetched successfully, size:", pdfBuffer.length, "bytes");
 
-	const interviewResults = await fetchInterviewResults(proemResultsApiUrl);
+    const interviewResults = await fetchInterviewResults(proemResultsApiUrl);
     console.log("Interview results fetched:", interviewResults);
 
 
@@ -37,8 +57,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
     const lastInterview = interviewResults.interviewResults?.[interviewResults.interviewResults.length - 1];
     if (lastInterview) {
       console.log("Last Interview (ID:", lastInterview.id, "):", lastInterview);
-      console.log("Answers for Last Interview:"); // Separate label
-      console.dir(lastInterview.answers, { depth: null }); // Correct usage with options
+      console.log("Answers for Last Interview:");
+      console.dir(lastInterview.answers, { depth: null });
     } else {
       console.log("No interviews found or interviewResults structure invalid.");
     }
@@ -53,10 +73,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Error:", message);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  } finally {
-    await prisma.$disconnect().catch((err: Error) =>
-      console.error("Failed to disconnect Prisma:", err)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
     );
+  } finally {
+    await prisma
+      .$disconnect()
+      .catch((err: Error) =>
+        console.error("Failed to disconnect Prisma:", err)
+      );
   }
 }
