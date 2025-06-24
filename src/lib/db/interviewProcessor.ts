@@ -1,6 +1,6 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
-interface InterviewResult {
+export interface InterviewResult {
   patient: string | number;
   interviewType: string;
   startedAt: string;
@@ -13,7 +13,7 @@ interface InterviewResult {
 }
 
 export async function processInterviewTransaction(
-  tx: PrismaClient | Prisma.TransactionClient,
+  tx: Prisma.TransactionClient, // Змінено з PrismaClient | Prisma.TransactionClient на тільки TransactionClient
   lastInterview: InterviewResult
 ) {
   const organizationId = await tx.patient.findUnique({
@@ -65,8 +65,8 @@ export async function processInterviewTransaction(
   const createdResponses = new Set<string>();
 
   const responseFieldPromises = lastInterview.answers.map(async (answer) => {
-  const label = `Question_${answer.question}`;
-  let field = createdFields.get(label);
+    const label = `Question_${answer.question}`;
+    let field = createdFields.get(label);
 
     if (!field) {
       field = await tx.formField.findFirst({ where: { label } });
