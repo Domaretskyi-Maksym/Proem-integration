@@ -21,35 +21,46 @@ export async function POST(
   try {
     const body = (await request.json()) as Partial<ProemCallbackBody>;
     console.log("Received request body:", body);
-    const { interviewResultId, bhtId } = validateProemCallback(body) ?? {};
 
-    if (!interviewResultId) {
+    const validated = validateProemCallback(body);
+    if (!validated?.interviewResultId) {
       return NextResponse.json(
         { error: "interviewResultId is missing or invalid" },
         { status: 400 }
       );
     }
 
+    const { interviewResultId, bhtId } = validated;
+
     await saveToDatabase(interviewResultId);
 
+    // Auth
     const { accessId, accessToken } = await getProemAuth();
-    const proemPDFApiUrl = buildUrlToFetchPDF(interviewResultId, accessId, accessToken);
-    console.log("Fetching PDF from:", proemPDFApiUrl);
 
-    const proemResultsApiUrl = buildURLToFetchInterviewResults(accessId, accessToken, bhtId);
-    console.log("Fetching interview results from:", proemResultsApiUrl);
+    // Build URLs
+    const pdfUrl = buildUrlToFetchPDF(interviewResultId, accessId, accessToken);
+    const resultsUrl = buildURLToFetchInterviewResults(accessId, accessToken, bhtId);
 
-    const pdfBuffer = await fetchPdfFromProem(proemPDFApiUrl);
-    console.log("PDF fetched successfully, size:", pdfBuffer.length, "bytes");
+    console.log("Fetching PDF from:", pdfUrl);
+    console.log("Fetching interview results from:", resultsUrl);
 
-    const interviewResults = await fetchInterviewResults(proemResultsApiUrl);
-    console.log("Interview results fetched:", interviewResults);
+    // Fetch file
+    const [pdfBuffer, interviewResults] = await Promise.all([
+      fetchPdfFromProem(pdfUrl),
+      fetchInterviewResults(resultsUrl),
+    ]);
 
+    console.log("PDF fetched successfully:", `${pdfBuffer.length} bytes`);
+    console.log("Interview results fetched");
 
-	// @ts-expect-error: Unreachable code error
-    const lastInterview = interviewResults.interviewResults?.[interviewResults.interviewResults.length - 1];
+    // Pick last interview
+    const interviews = interviewResults.interviewResults;
+    const lastInterview = Array.isArray(interviews)
+      ? interviews[interviews.length - 1]
+      : null;
+
     if (!lastInterview) {
-      console.log("No interviews found or interviewResults structure invalid.");
+      console.warn("No valid interview results found, sending PDF only.");
       return new NextResponse(pdfBuffer, {
         status: 200,
         headers: {
@@ -59,18 +70,26 @@ export async function POST(
       });
     }
 
-  const transactionResult = await prisma.$transaction(async (tx) => {
-      return await processInterviewTransaction(tx, lastInterview);
-    }, {
-      maxWait: 10000,
-      timeout: 30000,
+    console.log("Last Interview:", {
+      id: lastInterview.id,
+      type: lastInterview.interviewType,
+      answers: lastInterview.answers?.length,
     });
 
-    console.log("Transaction result:", transactionResult);
-    console.log("Last Interview (ID:", lastInterview.id, "):", lastInterview);
-    console.log("Answers for Last Interview:");
-    console.dir(lastInterview.answers, { depth: null });
+    // Save to DB
+    const transactionResult = await prisma.$transaction(
+      async (tx) => {
+        return await processInterviewTransaction(tx, lastInterview);
+      },
+      {
+        maxWait: 10000,
+        timeout: 30000,
+      }
+    );
 
+    console.log("Transaction result:", transactionResult);
+
+    // Return PDF response
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
@@ -80,7 +99,8 @@ export async function POST(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error:", message);
+    console.error("Error in POST /interview/complete:", message);
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

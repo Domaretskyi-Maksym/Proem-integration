@@ -10,6 +10,9 @@ export interface InterviewResult {
   sequence?: number;
 }
 
+export interface InterviewResultsResponse {
+  interviewResults: InterviewResult[];
+}
 
 export async function processInterviewTransaction(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,12 +70,11 @@ export async function processInterviewTransaction(
   const createdResponses = new Set<string>();
 
   const responseFieldPromises = lastInterview.answers.map(async (answer) => {
-    const label = `Question_${answer.question}`;
-    let field = createdFields.get(label);
+  const label = `Question_${answer.question}`;
+  let field = createdFields.get(label);
 
-    if (!field) {
-      field = await tx.formField.findFirst({ where: { label } });
-
+  if (!field) {
+    field = await tx.formField.findFirst({ where: { label } });
       if (!field) {
         field = await tx.formField.create({
           data: {
@@ -85,7 +87,6 @@ export async function processInterviewTransaction(
             updatedAt: new Date(lastInterview.completedAt),
           },
         });
-        console.log(`Created FormField: ${field.id}`);
       } else {
         console.log(`Found existing FormField: ${field.id}`);
       }
@@ -106,7 +107,6 @@ export async function processInterviewTransaction(
         },
       });
       createdResponses.add(responseKey);
-      console.log(`Created FormResponseField: response ${formResponse.id}, field ${field.id}`);
     }
   });
 

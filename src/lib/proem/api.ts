@@ -1,3 +1,5 @@
+import { InterviewResultsResponse } from "../db/interviewProcessor";
+
 export const fetchPdfFromProem = async (url: string): Promise<Buffer> => {
   const response = await fetch(url);
   if (!response.ok) {
@@ -7,7 +9,7 @@ export const fetchPdfFromProem = async (url: string): Promise<Buffer> => {
   return Buffer.from(pdfArrayBuffer);
 };
 
-export const fetchInterviewResults = async (url: string): Promise<unknown> => {
+export const fetchInterviewResults = async (url: string): Promise<InterviewResultsResponse> => {
   try {
     const response = await fetch(url, {
       method: "GET",
