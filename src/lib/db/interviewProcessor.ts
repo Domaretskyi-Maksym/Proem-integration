@@ -13,13 +13,15 @@ export interface InterviewResult {
 }
 
 export async function processInterviewTransaction(
-  tx: Prisma.TransactionClient, // Змінено з PrismaClient | Prisma.TransactionClient на тільки TransactionClient
+  tx: Prisma.TransactionClient,
   lastInterview: InterviewResult
 ) {
-  const organizationId = await tx.patient.findUnique({
+  const patientRecord = await tx.patient.findUnique({
     where: { id: lastInterview.patient },
     select: { organizationId: true },
-  })?.organizationId;
+  });
+
+  const organizationId = patientRecord?.organizationId;
 
   if (!organizationId) {
     throw new Error(`Organization ID not found for patient ${lastInterview.patient}`);
