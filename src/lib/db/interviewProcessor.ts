@@ -12,8 +12,10 @@ export interface InterviewResult {
   sequence?: number;
 }
 
+
 export async function processInterviewTransaction(
-  tx: Prisma.TransactionClient,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tx: any,
   lastInterview: InterviewResult
 ) {
   const patientRecord = await tx.patient.findUnique({
