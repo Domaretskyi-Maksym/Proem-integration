@@ -55,13 +55,85 @@ export async function POST(
 
 	// @ts-expect-error: Unreachable code error
     const lastInterview = interviewResults.interviewResults?.[interviewResults.interviewResults.length - 1];
-    if (lastInterview) {
-      console.log("Last Interview (ID:", lastInterview.id, "):", lastInterview);
-      console.log("Answers for Last Interview:");
-      console.dir(lastInterview.answers, { depth: null });
-    } else {
+   if (!lastInterview) {
       console.log("No interviews found or interviewResults structure invalid.");
+      return new NextResponse(pdfBuffer, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="interview_${interviewResultId}.pdf"`,
+        },
+      });
     }
+
+    // Start Prisma transaction for the last interview
+    await prisma.$transaction(async (tx) => {
+      // Define a default organizationId (replace with dynamic logic if needed)
+      const organizationId = "default_organization_id";
+
+      // Upsert Patient
+      const patient = await tx.patient.upsert({
+        where: { id: lastInterview.patient },
+        create: {
+          id: lastInterview.patient,
+          organizationId,
+          createdAt: new Date(lastInterview.startedAt),
+          updatedAt: new Date(),
+        },
+        update: { updatedAt: new Date() },
+      });
+
+      // Upsert Form based on interviewType
+      const form = await tx.form.upsert({
+        where: { id: 123 }, // Shpould be replaced with correct ID
+        create: {
+          title: `Interview_${lastInterview.interviewType}`,
+          createdBy: 2222, // Replace with actual ID
+          organizationId,
+          createdAt: new Date(lastInterview.startedAt),
+          updatedAt: new Date(lastInterview.completedAt),
+        },
+        update: { updatedAt: new Date(lastInterview.completedAt) },
+      });
+
+      // Create FormResponse
+      const formResponse = await tx.formResponse.create({
+        data: {
+          formId: form.id,
+          patientId: patient.id,
+          createdAt: new Date(lastInterview.startedAt),
+          updatedAt: new Date(lastInterview.completedAt),
+        },
+      });
+
+      // Create FormResponseField for each answer
+      if (lastInterview.answers && Array.isArray(lastInterview.answers)) {
+        for (const answer of lastInterview.answers) {
+          // Assume question is a fieldId or map it to an existing FormField
+          const field = await tx.formField.findFirst({
+            where: { label: `Question_${answer.question}` },
+          });
+          if (field) {
+            await tx.formResponseField.create({
+              data: {
+                responseId: formResponse.id,
+                fieldId: field.id,
+                valueString: typeof answer.answerValue === "string" ? answer.answerValue : null,
+                valueNumber: typeof answer.answerValue === "number" ? answer.answerValue : null,
+                createdAt: new Date(lastInterview.startedAt),
+                updatedAt: new Date(lastInterview.completedAt),
+              },
+            });
+          } else {
+            console.warn(`FormField not found for question ${answer.question}`);
+          }
+        }
+      }
+    });
+
+    console.log("Last Interview (ID:", lastInterview.id, "):", lastInterview);
+    console.log("Answers for Last Interview:");
+    console.dir(lastInterview.answers, { depth: null });
 
     return new NextResponse(pdfBuffer, {
       status: 200,
