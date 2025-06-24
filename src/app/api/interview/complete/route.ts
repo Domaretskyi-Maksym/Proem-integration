@@ -151,6 +151,9 @@ export async function POST(
   await Promise.all(responseFieldPromises);
 
   return { success: true };
+}, {
+   maxWait: 10000, // скільки максимально чекати на доступ до конекшена
+  timeout: 30000, // максимальний час виконання транзакції (в мілісекундах)
 });
 
     console.log("Transaction result:", transactionResult);
