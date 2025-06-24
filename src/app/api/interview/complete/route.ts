@@ -69,7 +69,7 @@ export async function POST(
     // Start Prisma transaction for the last interview
     await prisma.$transaction(async (tx) => {
       // Define a default organizationId (replace with dynamic logic if needed)
-      const organizationId = "default_organization_id";
+      const organizationId = "165746c5-4a59-4106-b39c-afc65d3abde6";
 
       // Upsert Patient
       const patient = await tx.patient.upsert({
