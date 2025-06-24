@@ -96,10 +96,12 @@ export async function POST(
         update: { updatedAt: new Date(lastInterview.completedAt) },
       });
 
+      console.log("Form:", form);
+
       // Create FormResponse
       const formResponse = await tx.formResponse.create({
         data: {
-          formId: form.id,
+          formId: 1, // Shpould be replaced with correct ID
           patientId: patient.id,
           createdAt: new Date(lastInterview.startedAt),
           updatedAt: new Date(lastInterview.completedAt),
