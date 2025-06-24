@@ -128,7 +128,7 @@ export async function POST(
               console.log(`Created FormField for question ${answer.question} with id ${field.id}`);
             } else {
               field = createdFields.get(label);
-              console.log(`Reusing created FormField for question ${answer.question} with id ${field.id}`);
+              console.log(`Reusing created FormField for question ${answer.question} with id ${field?.id}`);
             }
           } else {
             console.log(`Found existing FormField for question ${answer.question} with id ${field.id}`);
