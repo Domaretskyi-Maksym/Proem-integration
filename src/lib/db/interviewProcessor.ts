@@ -1,5 +1,3 @@
-import { Prisma } from "@prisma/client";
-
 export interface InterviewResult {
   patient: string | number;
   interviewType: string;
@@ -17,7 +15,8 @@ export interface InterviewResultsResponse {
 }
 
 export async function processInterviewTransaction(
-  tx: Prisma.TransactionClient,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tx: any,
   lastInterview: InterviewResult
 ) {
   const patientRecord = await tx.patient.findUnique({
