@@ -17,6 +17,7 @@ import {
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
+  let transactionResult = null;
   try {
     const body = (await request.json()) as Partial<ProemCallbackBody>;
     console.log("Received request body:", body);
@@ -59,7 +60,8 @@ export async function POST(
     }
 
     // Start Prisma transaction for the last interview
-    await prisma.$transaction(async (tx) => {
+  
+    transactionResult = await prisma.$transaction(async (tx) => {
       // Define a default organizationId
       const organizationId = "165746c5-4a59-4106-b39c-afc65d3abde6";
 
@@ -102,14 +104,13 @@ export async function POST(
 
       // Create FormResponseField for each answer with dynamic FormField creation
       if (lastInterview.answers && Array.isArray(lastInterview.answers)) {
-        const createdFields = new Map(); // Track created fields to avoid duplicates in one transaction
-        const createdResponses = new Map(); // Track created responses to avoid duplicates
+        const createdFields = new Map();
+        const createdResponses = new Map();
         for (const answer of lastInterview.answers) {
           let field = await tx.formField.findFirst({
             where: { label: `Question_${answer.question}` },
           });
           if (!field) {
-            // Create FormField only if not already created in this transaction
             const label = `Question_${answer.question}`;
             if (!createdFields.has(label)) {
               field = await tx.formField.create({
@@ -127,7 +128,7 @@ export async function POST(
               console.log(`Created FormField for question ${answer.question} with id ${field.id}`);
             } else {
               field = createdFields.get(label);
-              console.log(`Reusing created FormField for question ${answer.question} with id ${field?.id}`);
+              console.log(`Reusing created FormField for question ${answer.question} with id ${field.id}`);
             }
           } else {
             console.log(`Found existing FormField for question ${answer.question} with id ${field.id}`);
@@ -147,13 +148,17 @@ export async function POST(
               },
             });
             createdResponses.set(responseKey, true);
+            console.log(`Created FormResponseField for responseId ${formResponse.id} and fieldId ${field?.id}`);
           } else {
             console.log(`Skipping duplicate FormResponseField for responseId ${formResponse.id} and fieldId ${field?.id}`);
           }
         }
       }
+
+      return { success: true }; // Explicitly return to ensure transaction completes
     });
 
+    console.log("Transaction result:", transactionResult);
     console.log("Last Interview (ID:", lastInterview.id, "):", lastInterview);
     console.log("Answers for Last Interview:");
     console.dir(lastInterview.answers, { depth: null });
@@ -172,11 +177,5 @@ export async function POST(
       { error: "Internal server error" },
       { status: 500 }
     );
-  } finally {
-    await prisma
-      .$disconnect()
-      .catch((err: Error) =>
-        console.error("Failed to disconnect Prisma:", err)
-      );
   }
 }
