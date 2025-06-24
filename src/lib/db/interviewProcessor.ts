@@ -64,10 +64,11 @@ export async function processInterviewTransaction(
     },
   });
 
-  // 4. Create new FormFields + FormResponseFields for each answer
-  for (const answer of lastInterview.answers) {
+  // 4. Обробка відповідей
+  const responseFieldPromises = lastInterview.answers.map(async (answer) => {
     const label = `Question_${answer.question}`;
 
+    // 4.1 Створити поле для кожного питання, завжди нове
     const field = await tx.formField.create({
       data: {
         formId: form.id,
@@ -80,6 +81,7 @@ export async function processInterviewTransaction(
       },
     });
 
+    // 4.2 Створити відповідь
     await tx.formResponseField.create({
       data: {
         responseId: formResponse.id,
@@ -90,7 +92,9 @@ export async function processInterviewTransaction(
         updatedAt: new Date(lastInterview.completedAt),
       },
     });
-  }
+  });
+
+  await Promise.all(responseFieldPromises);
 
   return { success: true };
 }
