@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client";
+
 export interface InterviewResult {
   patient: string | number;
   interviewType: string;
@@ -15,8 +17,7 @@ export interface InterviewResultsResponse {
 }
 
 export async function processInterviewTransaction(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tx: any, // Replace with Prisma.TransactionClient in real TS setup
+  tx: Prisma.TransactionClient,
   lastInterview: InterviewResult
 ) {
   const patientRecord = await tx.patient.findUnique({
@@ -43,11 +44,11 @@ export async function processInterviewTransaction(
     },
   });
 
-  // 2. Create new Form (not upsert!)
+  // 2. Create new Form
   const form = await tx.form.create({
     data: {
       title: `Interview_${lastInterview.interviewType}_${Date.now()}`,
-      createdBy: 2222, // Replace with actual user if needed
+      createdBy: 2222,
       organizationId,
       createdAt: new Date(lastInterview.startedAt),
       updatedAt: new Date(lastInterview.completedAt),
@@ -64,11 +65,13 @@ export async function processInterviewTransaction(
     },
   });
 
-  // 4. Обробка відповідей
-  const responseFieldPromises = lastInterview.answers.map(async (answer) => {
+  console.log("Created FormResponse with ID:", formResponse.id);
+
+  // 4. Обробка відповідей послідовно
+  for (const answer of lastInterview.answers) {
     const label = `Question_${answer.question}`;
 
-    // 4.1 Створити поле для кожного питання, завжди нове
+    // 4.1 Створити поле для кожного питання
     const field = await tx.formField.create({
       data: {
         formId: form.id,
@@ -81,8 +84,10 @@ export async function processInterviewTransaction(
       },
     });
 
+    console.log("Created FormField with ID:", field.id);
+
     // 4.2 Створити відповідь
-    await tx.formResponseField.create({
+    const responseField = await tx.formResponseField.create({
       data: {
         responseId: formResponse.id,
         fieldId: field.id,
@@ -92,9 +97,9 @@ export async function processInterviewTransaction(
         updatedAt: new Date(lastInterview.completedAt),
       },
     });
-  });
 
-  await Promise.all(responseFieldPromises);
+    console.log("Created FormResponseField with ID:", responseField.id, "linked to responseId:", formResponse.id, "and fieldId:", field.id);
+  }
 
   return { success: true };
 }
