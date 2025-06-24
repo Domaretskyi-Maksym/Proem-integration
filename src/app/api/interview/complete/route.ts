@@ -14,6 +14,7 @@ import {
   ErrorResponse,
   ProemCallbackBody,
 } from "@/types/proem";
+import { Prisma } from "@prisma/client";
 
 export async function POST(
   request: NextRequest
@@ -59,7 +60,7 @@ export async function POST(
       });
     }
 
-  const transactionResult = await prisma.$transaction(async (tx) => {
+  const transactionResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       return await processInterviewTransaction(tx, lastInterview);
     }, {
       maxWait: 10000,
