@@ -1,6 +1,11 @@
 import { PrismaClient } from "@/lib/prisma/generated";
 type TxClient = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
 
+export interface Interview {
+  id: number;
+  title: string;
+}
+
 export interface InterviewResult {
   patient: string | number;
   interviewType: string;
@@ -8,6 +13,7 @@ export interface InterviewResult {
   completedAt: string;
   answers: { question: number; answerValue: string | number }[];
   id: string | number;
+  interview: Interview;
   status?: string;
   duration?: number;
   sequence?: number;
@@ -48,7 +54,7 @@ export async function processInterviewTransaction(
   // 2. Create new Form
   const form = await tx.form.create({
     data: {
-      title: `Interview_${lastInterview.interviewType}_${Date.now()}`,
+      title: lastInterview.interview.title,
       createdBy: 2222,
       organizationId,
       createdAt: new Date(lastInterview.startedAt),
