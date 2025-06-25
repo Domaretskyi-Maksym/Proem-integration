@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client";
+
 export interface InterviewResult {
   patient: string | number;
   interviewType: string;
@@ -15,8 +17,7 @@ export interface InterviewResultsResponse {
 }
 
 export async function processInterviewTransaction(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tx: any,
+  tx: Prisma.TransactionClient,
   lastInterview: InterviewResult
 ) {
   const patientRecord = await tx.patient.findUnique({
@@ -64,9 +65,6 @@ export async function processInterviewTransaction(
     },
   });
 
-  console.log("Created FormResponse with ID:", formResponse.id);
-
-  // 4. Обробка відповідей послідовно
   for (const answer of lastInterview.answers) {
     const label = `Question_${answer.question}`;
 
@@ -83,10 +81,7 @@ export async function processInterviewTransaction(
       },
     });
 
-    console.log("Created FormField with ID:", field.id);
-
-    // 4.2 Створити відповідь
-    const responseField = await tx.formResponseField.create({
+    await tx.formResponseField.create({
       data: {
         responseId: formResponse.id,
         fieldId: field.id,
@@ -96,8 +91,6 @@ export async function processInterviewTransaction(
         updatedAt: new Date(lastInterview.completedAt),
       },
     });
-
-    console.log("Created FormResponseField with ID:", responseField.id, "linked to responseId:", formResponse.id, "and fieldId:", field.id);
   }
 
   return { success: true };
