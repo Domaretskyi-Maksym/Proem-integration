@@ -117,6 +117,7 @@ model FormResponse {
   updatedAt DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
   form      Form                        @relation(fields: [formId], references: [id], onDelete: Cascade)
   patient   Patient?                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  pdfUrl    String?                     @map("pdf_url")
   fields    FormResponseField[]
   instances FormResponseGroupInstance[]
 

@@ -25,7 +25,8 @@ export interface InterviewResultsResponse {
 
 export async function processInterviewTransaction(
   tx: TxClient,
-  lastInterview: InterviewResult
+  lastInterview: InterviewResult,
+  pdfUrlOnSupabase: string
 ) {
   const patientRecord = await tx.patient.findUnique({
     where: { id: String(lastInterview.patient) },
@@ -67,6 +68,7 @@ export async function processInterviewTransaction(
     data: {
       formId: form.id,
       patientId: patient.id,
+      pdfUrl: pdfUrlOnSupabase,
       createdAt: new Date(lastInterview.startedAt),
       updatedAt: new Date(lastInterview.completedAt),
     },

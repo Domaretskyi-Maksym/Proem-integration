@@ -6,7 +6,6 @@ import {
 } from "@/lib/proem/utils";
 import { fetchPdfFromProem, fetchInterviewResults } from "@/lib/proem/api";
 import { validateProemCallback } from "@/lib/validation/proem";
-import { saveToDatabase } from "@/lib/db/utils";
 import { processInterviewTransaction } from "@/lib/db/interviewProcessor";
 import { prisma } from "@/lib/client";
 import {
@@ -14,6 +13,7 @@ import {
   ErrorResponse,
   ProemCallbackBody,
 } from "@/types/proem";
+import { uploadPdfToSupabase } from "@/lib/supabase/utils";
 
 export async function POST(
   request: NextRequest
@@ -31,8 +31,6 @@ export async function POST(
     }
 
     const { interviewResultId, bhtId } = validated;
-
-    await saveToDatabase(interviewResultId);
 
     // Auth
     const { accessId, accessToken } = await getProemAuth();
@@ -52,6 +50,9 @@ export async function POST(
 
     console.log("PDF fetched successfully:", `${pdfBuffer.length} bytes`);
     console.log("Interview results fetched");
+
+
+    const pdfUrlOnSupabase = await uploadPdfToSupabase(pdfBuffer, interviewResultId);
 
     // Pick last interview
     const interviews = interviewResults.interviewResults;
@@ -79,7 +80,7 @@ export async function POST(
     // Save to DB
     const transactionResult = await prisma.$transaction(
       async (tx) => {
-        return await processInterviewTransaction(tx, lastInterview);
+        return await processInterviewTransaction(tx, lastInterview, pdfUrlOnSupabase);
       },
       {
         maxWait: 10000,
