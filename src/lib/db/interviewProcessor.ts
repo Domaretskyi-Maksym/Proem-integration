@@ -11,7 +11,7 @@ export interface InterviewResult {
   interviewType: string;
   startedAt: string;
   completedAt: string;
-  answers: { question: number; answerValue: string | number }[];
+  answers: { questionName: string; answerValue: string | number }[];
   id: string | number;
   interview: Interview;
   status?: string;
@@ -73,13 +73,12 @@ export async function processInterviewTransaction(
   });
 
   for (const answer of lastInterview.answers) {
-    const label = `Question_${answer.question}`;
 
-    // 4.1 Створити поле для кожного питання
+    // 4. Create a field for each question
     const field = await tx.formField.create({
       data: {
         formId: form.id,
-        label,
+        label: answer.questionName,
         type: typeof answer.answerValue === "string" ? "text" : "number",
         sortOrder: 0,
         isRequired: false,
