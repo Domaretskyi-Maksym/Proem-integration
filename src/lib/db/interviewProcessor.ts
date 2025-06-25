@@ -1,4 +1,5 @@
-import { Prisma } from "@prisma/client";
+import { PrismaClient } from "@/lib/prisma/generated";
+type TxClient = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
 
 export interface InterviewResult {
   patient: string | number;
@@ -17,7 +18,7 @@ export interface InterviewResultsResponse {
 }
 
 export async function processInterviewTransaction(
-  tx: Prisma.TransactionClient,
+  tx: TxClient,
   lastInterview: InterviewResult
 ) {
   const patientRecord = await tx.patient.findUnique({
