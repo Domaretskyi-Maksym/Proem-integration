@@ -14,3 +14,5 @@ export const DEV_TOKENS = {
   maks: "ecD-7s6gg0M1sJbH5xbn5W_Vklxw4Zac",
   benjamin: "VHhd2KFoSgFLnshd_23NWu427SsiCpKY"
 };
+
+export const OCDFEAT_ID = "971"; // OcdFeat ID for Proem test environment, works only for Iframe API
