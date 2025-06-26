@@ -1,10 +1,14 @@
 'use client'
 
-import { useState } from "react";
+import { useState } from 'react';
+import { INTERVIEW_TYPES, DEV_TOKENS, PATIENT_EXTERNAL_ID } from '@/constants';
 
 export default function Home() {
   const [isIframeVisible, setIsIframeVisible] = useState(false);
-  const [iframeSrc] = useState("https://proemhealth-app.nview.tech/interview/auth/Wx5W63DKJyMYEAsmddQ7mjgXwzaekPf6/971/322/763315");
+  
+  const iframeSrc = `https://proemhealth-app.nview.tech/interview/auth/${
+    DEV_TOKENS.colin
+  }/971/${INTERVIEW_TYPES.yBocsII}/${PATIENT_EXTERNAL_ID}`;
 
   function handleClick() {
     setIsIframeVisible(true);

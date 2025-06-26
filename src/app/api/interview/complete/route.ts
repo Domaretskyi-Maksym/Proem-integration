@@ -30,6 +30,7 @@ export async function POST(
       );
     }
 
+    // The interviewResultId returned by Proem in the callback is used solely to retrieve the PDF result of the interview. It cannot be used to fetch a specific patient's interview.
     const { interviewResultId, bhtId } = validated;
 
     // Auth
@@ -37,12 +38,14 @@ export async function POST(
 
     // Build URLs
     const pdfUrl = buildUrlToFetchPDF(interviewResultId, accessId, accessToken);
+    
+    // Since we are using the Iframe API instead of the Proem API, we cannot retrieve a specific patient's interview. However, we can fetch all interviews for the current day using the patientExternalId (returned as bhtId in the Proem callback), where the latest interview will be at the end of the interviewResults array.
     const resultsUrl = buildURLToFetchInterviewResults(accessId, accessToken, bhtId);
 
     console.log("Fetching PDF from:", pdfUrl);
     console.log("Fetching interview results from:", resultsUrl);
 
-    // Fetch file
+    // Fetch PDF and interview results
     const [pdfBuffer, interviewResults] = await Promise.all([
       fetchPdfFromProem(pdfUrl),
       fetchInterviewResults(resultsUrl),
@@ -70,12 +73,6 @@ export async function POST(
         },
       });
     }
-
-    console.log("Last Interview:", {
-      id: lastInterview.id,
-      type: lastInterview.interviewType,
-      answers: lastInterview.answers?.length,
-    });
 
     // Save to DB
     const transactionResult = await prisma.$transaction(
