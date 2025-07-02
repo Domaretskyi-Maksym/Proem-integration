@@ -8,7 +8,7 @@ export default function Home() {
   
   const iframeSrc = `https://proemhealth-app.nview.tech/interview/auth/${
     DEV_TOKENS.colin
-  }/${OCDFEAT_ID}/${INTERVIEW_TYPES.cyBocs}/${PATIENT_EXTERNAL_ID}`;
+  }/${OCDFEAT_ID}/${INTERVIEW_TYPES.cyBocsII}/${PATIENT_EXTERNAL_ID}`;
 
   function handleClick() {
     setIsIframeVisible(true);
